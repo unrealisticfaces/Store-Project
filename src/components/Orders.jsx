@@ -9,9 +9,9 @@ export default function Orders() {
   const [settings, setSettings] = useState({ currency: 'USD', taxRate: '0' });
   const [searchQuery, setSearchQuery] = useState('');
   
-  // New Customer Checkout States
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [useStoreCredit, setUseStoreCredit] = useState(false);
+  const [activeShift, setActiveShift] = useState(null); // Tracks the open Z-Report shift
   
   const searchInputRef = useRef(null); 
   const showToast = useToast();
@@ -26,6 +26,8 @@ export default function Orders() {
       try {
         setProducts(await window.electronAPI.getProducts());
         setCustomers(await window.electronAPI.getCustomers());
+        setActiveShift(await window.electronAPI.getActiveShift()); // Fetch Shift Status
+        
         const sData = await window.electronAPI.getSettings();
         const sObj = {};
         sData.forEach(item => sObj[item.key] = item.value);
@@ -74,7 +76,6 @@ export default function Orders() {
 
   const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
 
-  // --- Dynamic Math ---
   const currencySymbol = { USD: '$', EUR: '€', GBP: '£', PHP: '₱' }[settings.currency] || '$';
   const taxRateNum = parseFloat(settings.taxRate) || 0;
   
@@ -82,21 +83,25 @@ export default function Orders() {
   const taxAmount = subtotal * (taxRateNum / 100);
   const grandTotal = subtotal + taxAmount;
 
-  // Determine Credit Application
   const selectedCustomer = customers.find(c => c.id === parseInt(selectedCustomerId));
   const maxCreditAvailable = selectedCustomer ? selectedCustomer.store_credit : 0;
-  
-  // If they want to use credit, they can only use up to the grand total, or their max balance.
   const creditApplied = (useStoreCredit && maxCreditAvailable > 0) ? Math.min(maxCreditAvailable, grandTotal) : 0;
   const finalAmountDue = grandTotal - creditApplied;
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
+    
+    // Safety check: Cannot process sales if the register is closed
+    if (!activeShift) {
+      return showToast("You must Open a Shift before processing sales!", "error");
+    }
+
     if (window.electronAPI) {
       try {
         await window.electronAPI.processOrder({
           cart,
           customerId: selectedCustomerId ? parseInt(selectedCustomerId) : null,
+          shiftId: activeShift.id, // Links the sale to the current Z-Report
           creditUsed: creditApplied
         });
         
@@ -115,7 +120,6 @@ export default function Orders() {
   return (
     <div className="h-full flex gap-6 max-w-[1400px] mx-auto">
       
-      {/* Search & Product Grid */}
       <div className="flex-1 bg-white border border-[#e6e8e9] rounded-md flex flex-col overflow-hidden shadow-sm">
         <div className="p-5 border-b border-[#e6e8e9] flex items-center justify-between bg-white z-10">
           <h2 className="text-xl font-bold text-[#182433]">Point of Sale</h2>
@@ -149,10 +153,8 @@ export default function Orders() {
         </div>
       </div>
 
-      {/* Cart Panel */}
       <div className="w-[400px] bg-white border border-[#e6e8e9] rounded-md flex flex-col overflow-hidden shadow-sm">
         
-        {/* CUSTOMER SELECTOR */}
         <div className="p-4 border-b border-[#e6e8e9] bg-[#f8f9fa]">
           <label className="block text-xs font-bold text-[#667382] uppercase tracking-wider mb-2">Assign Customer</label>
           <div className="relative">
@@ -168,7 +170,6 @@ export default function Orders() {
           </div>
         </div>
         
-        {/* ITEMS LIST */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8f9fa]">
           {cart.map(item => (
             <div key={item.id} className="flex items-center justify-between p-3 rounded-md border border-[#e6e8e9] bg-white shadow-sm">
@@ -186,7 +187,6 @@ export default function Orders() {
           ))}
         </div>
 
-        {/* TOTALS & CHECKOUT */}
         <div className="p-5 bg-white border-t border-[#e6e8e9] space-y-2 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="flex justify-between items-center text-sm">
             <span className="text-[#667382] font-medium">Subtotal</span><span className="font-semibold text-[#182433]">{currencySymbol}{subtotal.toFixed(2)}</span>
@@ -197,7 +197,6 @@ export default function Orders() {
             </div>
           )}
 
-          {/* STORE CREDIT TOGGLE */}
           {selectedCustomer && maxCreditAvailable > 0 && (
             <div className="py-3 border-b border-[#e6e8e9]">
               <label className="flex items-center cursor-pointer">

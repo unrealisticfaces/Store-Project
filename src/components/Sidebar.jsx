@@ -1,4 +1,4 @@
-import { IconDashboard, IconPackage, IconShoppingCart, IconUsers, IconSettings, IconReceipt2, IconLogout } from '@tabler/icons-react';
+import { IconDashboard, IconPackage, IconShoppingCart, IconUsers, IconSettings, IconReceipt2, IconLogout, IconCash } from '@tabler/icons-react';
 
 export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout }) {
   const activeClass = "w-full flex items-center px-3 py-2 rounded-md group bg-[#e6f0fa] text-[#206bc4] font-medium";
@@ -33,6 +33,10 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
 
         <div className="px-3 mb-2 text-[11px] font-bold uppercase tracking-widest text-[#667382]">Store Operations</div>
         <nav className="space-y-1 mb-6">
+          <button onClick={() => setActiveTab('shifts')} className={activeTab === 'shifts' ? activeClass : inactiveClass}>
+            <IconCash stroke={1.5} size={20} className="mr-3" />
+            <span className="text-sm flex-1 text-left">Cash Register</span>
+          </button>
           <button onClick={() => setActiveTab('orders')} className={activeTab === 'orders' ? activeClass : inactiveClass}>
             <IconShoppingCart stroke={1.5} size={20} className="mr-3" />
             <span className="text-sm flex-1 text-left">Point of Sale</span>

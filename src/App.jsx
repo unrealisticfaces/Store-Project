@@ -8,17 +8,18 @@ import Transactions from './components/Transactions';
 import Settings from './components/Settings';
 import StaffAccounts from './components/StaffAccounts';
 import Customers from './components/Customers';
+import ShiftManager from './components/ShiftManager';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('orders'); // Default for all users
+  
+  // Default cashiers to shifts so they can open the register first
+  const [activeTab, setActiveTab] = useState('shifts'); 
 
-  // If no one is logged in, show the Login screen ONLY
   if (!currentUser) {
     return <Login onLogin={(user) => {
       setCurrentUser(user);
-      // Send Admins to Dashboard, Cashiers to POS
-      setActiveTab(user.role === 'admin' ? 'dashboard' : 'orders');
+      setActiveTab(user.role === 'admin' ? 'dashboard' : 'shifts');
     }} />;
   }
 
@@ -40,6 +41,7 @@ export default function App() {
           {currentUser.role === 'admin' && activeTab === 'staff' && <StaffAccounts currentUser={currentUser} />}
           
           {/* Shared Routes */}
+          {activeTab === 'shifts' && <ShiftManager currentUser={currentUser} />}
           {activeTab === 'orders' && <Orders />}
           {activeTab === 'transactions' && <Transactions />}
 

@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { IconPlus, IconPackage, IconTrash, IconMinus, IconPhoto, IconX, IconAlertTriangle } from '@tabler/icons-react';
+import { IconPlus, IconPackage, IconTrash, IconMinus, IconPhoto, IconX, IconAlertTriangle, IconFileImport } from '@tabler/icons-react';
+import { useToast } from '../contexts/ToastContext';
 
 export default function Inventory() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   
-  // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [deleteConfirmId, setDeleteConfirmId] = useState(null); // Holds ID of product to delete
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   
   const [formData, setFormData] = useState({ name: '', sku: '', price: '', stock: '', category: '', image: '' });
+  
+  const showToast = useToast();
 
   useEffect(() => { 
     loadProducts(); 
@@ -56,7 +58,8 @@ export default function Inventory() {
         loadProducts();
         setIsAddModalOpen(false);
         setFormData({ name: '', sku: '', price: '', stock: '', category: categories[0]?.name || '', image: '' });
-      } catch (error) { console.error(error); }
+        showToast("Product added successfully!", "success");
+      } catch (error) { showToast("Failed to add product or SKU already exists.", "error"); }
     }
   };
 
@@ -66,7 +69,8 @@ export default function Inventory() {
         await window.electronAPI.deleteProduct(deleteConfirmId);
         loadProducts();
         setDeleteConfirmId(null);
-      } catch (error) { console.error(error); }
+        showToast("Product deleted.", "success");
+      } catch (error) { showToast("Failed to delete product.", "error"); }
     }
   };
 
@@ -81,24 +85,38 @@ export default function Inventory() {
     }
   };
 
+  const handleBulkImport = async () => {
+    if (window.electronAPI) {
+      try {
+        const result = await window.electronAPI.importCsv();
+        if (result.success) {
+          showToast(`Successfully imported ${result.count} products!`, 'success');
+          loadProducts();
+        }
+      } catch (error) {
+        showToast("Import failed. Check your CSV format.", "error");
+      }
+    }
+  };
+
   const inputClass = "bg-white border border-[#e6e8e9] rounded-md px-3 py-2 text-[#182433] text-sm focus:outline-none focus:border-[#206bc4] transition-colors w-full";
   const labelClass = "block text-xs font-semibold text-[#182433] mb-1.5";
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-[#182433]">Inventory Management</h2>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center bg-[#206bc4] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#1d5fb0] transition-colors shadow-sm"
-        >
-          <IconPlus stroke={2} size={18} className="mr-2" /> Add Product
-        </button>
+        <div className="flex items-center space-x-3">
+          <button onClick={handleBulkImport} className="flex items-center bg-white border border-[#e6e8e9] text-[#182433] px-4 py-2 rounded-md text-sm font-medium hover:bg-[#f8f9fa] shadow-sm transition-colors">
+            <IconFileImport stroke={1.5} size={18} className="mr-2 text-[#206bc4]" /> Import CSV
+          </button>
+          <button onClick={() => setIsAddModalOpen(true)} className="flex items-center bg-[#206bc4] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#1d5fb0] transition-colors shadow-sm">
+            <IconPlus stroke={2} size={18} className="mr-2" /> Add Product
+          </button>
+        </div>
       </div>
 
-      {/* Tabler Data Table */}
       <div className="bg-white border border-[#e6e8e9] rounded-md shadow-sm overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-[#f8f9fa] text-[11px] uppercase tracking-wider text-[#667382] font-bold border-b border-[#e6e8e9]">
@@ -118,7 +136,7 @@ export default function Inventory() {
                 <td colSpan="7" className="px-5 py-16 text-center text-[#667382]">
                   <IconPackage stroke={1} className="mx-auto h-12 w-12 mb-3 text-[#dce1e7]" />
                   <p className="text-base font-medium text-[#182433]">No products found</p>
-                  <p className="text-sm mt-1">Click "Add Product" to start building your inventory.</p>
+                  <p className="text-sm mt-1">Click "Add Product" or "Import CSV" to start building your inventory.</p>
                 </td>
               </tr>
             ) : (
@@ -160,16 +178,13 @@ export default function Inventory() {
         </table>
       </div>
 
-      {/* --- MODAL: Add Product Form (Tabler modal-report) --- */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#182433]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            
             <div className="px-6 py-4 border-b border-[#e6e8e9] flex justify-between items-center bg-white">
               <h3 className="font-bold text-[#182433] text-lg">New Product Report</h3>
               <button onClick={() => setIsAddModalOpen(false)} className="text-[#667382] hover:text-[#d63939] transition-colors p-1"><IconX stroke={2} size={20} /></button>
             </div>
-
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 max-h-[80vh]">
               <div className="p-6 overflow-y-auto space-y-5">
                 <div className="grid grid-cols-2 gap-5">
@@ -216,7 +231,6 @@ export default function Inventory() {
                   </div>
                 </div>
               </div>
-
               <div className="px-6 py-4 bg-[#f8f9fa] border-t border-[#e6e8e9] flex justify-end space-x-3">
                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-sm font-medium text-[#667382] hover:text-[#182433] transition-colors bg-white border border-[#e6e8e9] rounded-md shadow-sm hover:bg-[#f4f6fa]">
                   Cancel
@@ -230,7 +244,6 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* --- MODAL: Danger Confirmation (Tabler modal-danger) --- */}
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#182433]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-sm flex flex-col overflow-hidden text-center animate-in zoom-in-95 duration-200">
@@ -254,7 +267,6 @@ export default function Inventory() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
