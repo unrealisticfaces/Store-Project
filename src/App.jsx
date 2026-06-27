@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -12,9 +12,17 @@ import ShiftManager from './components/ShiftManager';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
-  
-  // Default cashiers to shifts so they can open the register first
-  const [activeTab, setActiveTab] = useState('shifts'); 
+  const [activeTab, setActiveTab] = useState('shifts');
+  const [theme, setTheme] = useState('light');
+
+  useEffect(() => {
+    if (window.electronAPI) {
+      window.electronAPI.getSettings().then(sData => {
+        const t = sData.find(s => s.key === 'theme');
+        if (t) setTheme(t.value);
+      });
+    }
+  }, []);
 
   if (!currentUser) {
     return <Login onLogin={(user) => {
@@ -28,23 +36,19 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-[#f4f6fa] overflow-hidden font-sans">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} onLogout={handleLogout} />
+    <div className={`flex h-screen overflow-hidden font-sans ${theme === 'dark' ? 'bg-[#121212] text-[#e0e0e0]' : 'bg-[#f4f6fa] text-[#182433]'}`}>
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} onLogout={handleLogout} theme={theme} />
       <main className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto p-8">
+          {currentUser.role === 'admin' && activeTab === 'dashboard' && <Dashboard theme={theme} />}
+          {currentUser.role === 'admin' && activeTab === 'inventory' && <Inventory theme={theme} />}
+          {currentUser.role === 'admin' && activeTab === 'customers' && <Customers theme={theme} />}
+          {currentUser.role === 'admin' && activeTab === 'settings' && <Settings theme={theme} setTheme={setTheme} />}
+          {currentUser.role === 'admin' && activeTab === 'staff' && <StaffAccounts currentUser={currentUser} theme={theme} />}
           
-          {/* Admin Only Routes */}
-          {currentUser.role === 'admin' && activeTab === 'dashboard' && <Dashboard />}
-          {currentUser.role === 'admin' && activeTab === 'inventory' && <Inventory />}
-          {currentUser.role === 'admin' && activeTab === 'customers' && <Customers />}
-          {currentUser.role === 'admin' && activeTab === 'settings' && <Settings />}
-          {currentUser.role === 'admin' && activeTab === 'staff' && <StaffAccounts currentUser={currentUser} />}
-          
-          {/* Shared Routes */}
-          {activeTab === 'shifts' && <ShiftManager currentUser={currentUser} />}
-          {activeTab === 'orders' && <Orders />}
-          {activeTab === 'transactions' && <Transactions />}
-
+          {activeTab === 'shifts' && <ShiftManager currentUser={currentUser} theme={theme} />}
+          {activeTab === 'orders' && <Orders theme={theme} />}
+          {activeTab === 'transactions' && <Transactions theme={theme} />}
         </div>
       </main>
     </div>

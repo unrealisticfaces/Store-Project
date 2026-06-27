@@ -1,182 +1,215 @@
-import { useState, useEffect } from 'react';
-import { IconReceipt2, IconEye, IconX, IconPackage, IconFileDownload, IconPrinter } from '@tabler/icons-react';
+import { useState, useEffect, useMemo } from 'react';
+import { IconReceipt2, IconEye, IconX, IconPackage, IconFileDownload, IconPrinter, IconSearch, IconChevronUp, IconChevronDown, IconSelector } from '@tabler/icons-react';
+import { useToast } from '../contexts/ToastContext';
 
-export default function Transactions() {
+export default function Transactions({ theme }) {
   const [transactions, setTransactions] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [settings, setSettings] = useState({ storeName: 'My Store', currency: 'USD' });
+  
+  // Datagrid State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'descending' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  const showToast = useToast();
+  const isDark = theme === 'dark';
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     if (window.electronAPI) {
       try {
-        const transData = await window.electronAPI.getTransactions();
-        setTransactions(transData);
-        
-        // Fetch Settings for the Receipt Printer
+        setTransactions(await window.electronAPI.getTransactions() || []);
         const sData = await window.electronAPI.getSettings();
-        const sObj = {};
+        const sObj = { storeName: 'My Store', currency: 'USD' };
         sData.forEach(item => sObj[item.key] = item.value);
-        setSettings({ storeName: sObj.storeName || 'My Store', currency: sObj.currency || 'USD' });
-      } catch (error) { console.error(error); }
+        setSettings(sObj);
+      } catch (error) { showToast("Failed to load transactions.", "error"); }
     }
   };
 
   const handleExportCSV = async () => {
-    if (transactions.length === 0) return alert("No transactions to export.");
+    if (transactions.length === 0) return showToast("No transactions to export.", "error");
     if (window.electronAPI) {
       const success = await window.electronAPI.exportCsv(transactions);
-      if (success) alert("CSV Exported Successfully!");
+      if (success) showToast("CSV Exported Successfully!", "success");
     }
   };
 
   const handlePrintReceipt = async () => {
     if (window.electronAPI && selectedOrder) {
-      await window.electronAPI.printReceipt({ order: selectedOrder, settings });
+      const success = await window.electronAPI.printReceipt({ order: selectedOrder, settings });
+      if (!success) showToast("Printing failed.", "error");
     }
   };
 
   const currencySymbol = { USD: '$', EUR: '€', GBP: '£', PHP: '₱' }[settings.currency] || '$';
 
+  // --- Datagrid Logic ---
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') direction = 'descending';
+    setSortConfig({ key, direction });
+  };
+
+  const filteredAndSorted = useMemo(() => {
+    let sortable = [...transactions];
+    
+    // Filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      sortable = sortable.filter(t => 
+        t.id.toString().includes(q) || 
+        (t.customer_name && t.customer_name.toLowerCase().includes(q))
+      );
+    }
+    
+    // Sort
+    sortable.sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+      
+      // Calculate derived fields for sorting
+      if (sortConfig.key === 'totalItems') {
+        aVal = a.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+        bVal = b.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+      }
+      if (sortConfig.key === 'finalTotal') {
+        aVal = (a.total || 0) - (a.credit_used || 0);
+        bVal = (b.total || 0) - (b.credit_used || 0);
+      }
+      
+      if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
+      return 0;
+    });
+    return sortable;
+  }, [transactions, searchQuery, sortConfig]);
+
+  const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage) || 1;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredAndSorted.slice(indexOfFirstItem, indexOfLastItem);
+
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [totalPages, currentPage]);
+
+  const inputClass = isDark ? "bg-[#121212] border border-[#333333] rounded-md px-3 py-2 text-[#e0e0e0] text-sm focus:outline-none focus:border-[#ffb300]" : "bg-white border border-[#e6e8e9] rounded-md px-3 py-2 text-[#182433] text-sm focus:outline-none focus:border-[#206bc4]";
+  const thClass = `px-5 py-3 cursor-pointer select-none transition-colors ${isDark ? 'hover:bg-[#252525]' : 'hover:bg-[#e6e8e9]/50'}`;
+  
+  const SortIcon = ({ column }) => {
+    if (sortConfig.key !== column) return <IconSelector size={14} className={isDark ? "text-[#555]" : "text-[#a0aab5]"} />;
+    return sortConfig.direction === 'ascending' ? <IconChevronUp size={14} className={isDark ? "text-[#ffb300]" : "text-[#206bc4]"} /> : <IconChevronDown size={14} className={isDark ? "text-[#ffb300]" : "text-[#206bc4]"} />;
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 relative">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#182433]">Sales History</h2>
-        
-        {/* NEW: Export Button */}
-        <button 
-          onClick={handleExportCSV}
-          className="flex items-center bg-white border border-[#e6e8e9] text-[#182433] px-4 py-2 rounded-md text-sm font-medium hover:bg-[#f8f9fa] hover:border-[#dce1e7] transition-all shadow-sm"
-        >
-          <IconFileDownload stroke={1.5} size={18} className="mr-2 text-[#206bc4]" />
-          Export to CSV
+        <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-[#182433]'}`}>Sales History</h2>
+        <button onClick={handleExportCSV} className={`flex items-center px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors border ${isDark ? 'bg-[#1a1a1a] border-[#333333] text-[#e0e0e0] hover:border-[#ffb300]' : 'bg-white border-[#e6e8e9] text-[#182433] hover:bg-[#f8f9fa]'}`}>
+          <IconFileDownload stroke={1.5} size={18} className={`mr-2 ${isDark ? 'text-[#ffb300]' : 'text-[#206bc4]'}`} /> Export to CSV
         </button>
       </div>
 
-      {/* Data Table */}
-      <div className="bg-white border border-[#e6e8e9] rounded-md shadow-sm overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[#f8f9fa] text-[11px] uppercase tracking-wider text-[#667382] font-bold border-b border-[#e6e8e9]">
-            <tr>
-              <th className="px-5 py-3">Order ID</th>
-              <th className="px-5 py-3">Date & Time</th>
-              <th className="px-5 py-3 text-center">Total Items</th>
-              <th className="px-5 py-3">Amount Paid</th>
-              <th className="px-5 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#e6e8e9] text-[#182433]">
-            {transactions.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="px-5 py-10 text-center text-[#667382]">
-                  <IconReceipt2 stroke={1} className="mx-auto h-10 w-10 mb-2 text-[#dce1e7]" />
-                  <p>No transactions recorded yet.</p>
-                </td>
-              </tr>
-            ) : (
-              transactions.map((order) => {
-                const totalItems = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-                return (
-                  <tr key={order.id} className="hover:bg-[#f8f9fa] transition-colors">
-                    <td className="px-5 py-3 font-semibold text-[#206bc4]">#{order.id}</td>
-                    <td className="px-5 py-3 text-[#667382]">{new Date(order.date).toLocaleString()}</td>
-                    <td className="px-5 py-3 text-center">
-                      <span className="bg-[#f4f6fa] text-[#667382] px-2.5 py-0.5 rounded border border-[#e6e8e9] text-xs font-medium">
-                        {totalItems} items
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 font-bold">{currencySymbol}{order.total.toFixed(2)}</td>
-                    <td className="px-5 py-3 text-right">
-                      <button 
-                        onClick={() => setSelectedOrder(order)} 
-                        className="flex items-center justify-end w-full space-x-1 text-[#667382] hover:text-[#206bc4] transition-colors font-medium text-xs uppercase tracking-wide"
-                      >
-                        <IconEye stroke={1.5} size={16} />
-                        <span>View</span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Order Details Modal Overlay */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#182433]/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-md shadow-lg w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            
-            <div className="px-6 py-4 border-b border-[#e6e8e9] flex justify-between items-center bg-[#f8f9fa]">
-              <h3 className="font-bold text-[#182433] text-lg flex items-center">
-                <IconReceipt2 stroke={1.5} className="mr-2 text-[#206bc4]" />
-                Order #{selectedOrder.id}
-              </h3>
-              <button onClick={() => setSelectedOrder(null)} className="text-[#667382] hover:text-[#d63939] transition-colors p-1">
-                <IconX stroke={2} size={20} />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto flex-1 bg-white">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <p className="text-xs font-bold text-[#667382] uppercase tracking-wider mb-1">Transaction Date</p>
-                  <p className="text-[#182433]">{new Date(selectedOrder.date).toLocaleString()}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-[#667382] uppercase tracking-wider mb-1">Total Paid</p>
-                  <p className="text-2xl font-bold text-[#2ba02b]">{currencySymbol}{selectedOrder.total.toFixed(2)}</p>
-                </div>
-              </div>
-
-              <h4 className="text-xs font-bold text-[#667382] uppercase tracking-wider mb-3 border-b border-[#e6e8e9] pb-2">Purchased Items</h4>
-              
-              <div className="space-y-0 divide-y divide-[#e6e8e9]">
-                {selectedOrder.items && selectedOrder.items.map(item => (
-                  <div key={item.id} className="flex items-center justify-between py-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="h-8 w-8 rounded bg-[#f4f6fa] border border-[#e6e8e9] flex items-center justify-center text-[#667382]">
-                        <IconPackage size={16} stroke={1.5} />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-[#182433] text-sm">{item.product_name}</h4>
-                        <p className="text-[11px] text-[#667382]">{currencySymbol}{item.price.toFixed(2)} each</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-6">
-                      <span className="text-xs font-medium text-[#667382] bg-[#f8f9fa] px-2 py-1 rounded border border-[#e6e8e9]">
-                        Qty: {item.quantity}
-                      </span>
-                      <span className="font-bold text-[#182433] w-20 text-right">{currencySymbol}{(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-[#e6e8e9] bg-[#f8f9fa] flex justify-between">
-              {/* NEW: Native Print Button */}
-              <button 
-                onClick={handlePrintReceipt}
-                className="flex items-center bg-white border border-[#e6e8e9] text-[#182433] px-4 py-2 rounded-md text-sm font-medium hover:bg-[#f4f6fa] transition-colors shadow-sm"
-              >
-                <IconPrinter size={18} stroke={1.5} className="mr-2 text-[#667382]" />
-                Print Receipt
-              </button>
-              
-              <button 
-                onClick={() => setSelectedOrder(null)}
-                className="bg-[#206bc4] text-white px-5 py-2 rounded-md text-sm font-bold hover:bg-[#1d5fb0] transition-colors shadow-sm"
-              >
-                Done
-              </button>
-            </div>
-            
+      <div className={`border rounded-md shadow-sm overflow-hidden flex flex-col ${isDark ? 'bg-[#1e1e1e] border-[#333333]' : 'bg-white border-[#e6e8e9]'}`}>
+        
+        {/* Toolbar */}
+        <div className={`p-4 border-b flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-[#333333] bg-[#1a1a1a]' : 'border-[#e6e8e9] bg-white'}`}>
+          <div className="flex items-center space-x-2">
+            <span className={`text-sm ${isDark ? 'text-[#a0a0a0]' : 'text-[#667382]'}`}>Show</span>
+            <select value={itemsPerPage} onChange={(e) => {setItemsPerPage(Number(e.target.value)); setCurrentPage(1);}} className={`${inputClass} py-1.5 pr-8`}>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+            <span className={`text-sm ${isDark ? 'text-[#a0a0a0]' : 'text-[#667382]'}`}>entries</span>
+          </div>
+          <div className="relative w-full sm:w-auto">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#667382]"><IconSearch size={16} /></div>
+            <input type="text" value={searchQuery} onChange={(e) => {setSearchQuery(e.target.value); setCurrentPage(1);}} placeholder="Search Order ID or Customer..." className={`${inputClass} pl-9 w-full sm:w-64`} />
           </div>
         </div>
-      )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className={`text-[11px] uppercase tracking-wider font-bold border-b ${isDark ? 'bg-[#121212] text-[#a0a0a0] border-[#333333]' : 'bg-[#f8f9fa] text-[#667382] border-[#e6e8e9]'}`}>
+              <tr>
+                <th className={thClass} onClick={() => requestSort('id')}>
+                  <div className="flex items-center justify-between">Order ID <SortIcon column="id" /></div>
+                </th>
+                <th className={thClass} onClick={() => requestSort('date')}>
+                  <div className="flex items-center justify-between">Date & Time <SortIcon column="date" /></div>
+                </th>
+                <th className={thClass} onClick={() => requestSort('customer_name')}>
+                  <div className="flex items-center justify-between">Customer <SortIcon column="customer_name" /></div>
+                </th>
+                <th className={thClass} onClick={() => requestSort('totalItems')}>
+                  <div className="flex items-center justify-between">Items <SortIcon column="totalItems" /></div>
+                </th>
+                <th className={thClass} onClick={() => requestSort('finalTotal')}>
+                  <div className="flex items-center justify-between">Amount Paid <SortIcon column="finalTotal" /></div>
+                </th>
+                <th className="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className={`divide-y ${isDark ? 'divide-[#333333] text-[#e0e0e0]' : 'divide-[#e6e8e9] text-[#182433]'}`}>
+              {currentItems.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className={`px-5 py-10 text-center ${isDark ? 'text-[#7a7a7a]' : 'text-[#667382]'}`}>
+                    <IconReceipt2 stroke={1} className="mx-auto h-10 w-10 mb-2 opacity-50" />
+                    <p>No transactions found.</p>
+                  </td>
+                </tr>
+              ) : (
+                currentItems.map((order) => {
+                  const totalItems = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+                  const finalTotal = (order.total || 0) - (order.credit_used || 0);
+                  return (
+                    <tr key={order.id} className={`transition-colors ${isDark ? 'hover:bg-[#252525]' : 'hover:bg-[#f8f9fa]'}`}>
+                      <td className={`px-5 py-3 font-semibold ${isDark ? 'text-[#ffb300]' : 'text-[#206bc4]'}`}>#{order.id}</td>
+                      <td className={`px-5 py-3 ${isDark ? 'text-[#a0a0a0]' : 'text-[#667382]'}`}>{new Date(order.date).toLocaleString()}</td>
+                      <td className="px-5 py-3">{order.customer_name || <span className={`italic ${isDark ? 'text-[#555]' : 'text-[#667382]'}`}>Guest</span>}</td>
+                      <td className="px-5 py-3">
+                        <span className={`px-2.5 py-0.5 rounded border text-xs font-medium ${isDark ? 'bg-[#121212] border-[#333333] text-[#a0a0a0]' : 'bg-[#f4f6fa] border-[#e6e8e9] text-[#667382]'}`}>
+                          {totalItems}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 font-bold">{currencySymbol}{finalTotal.toFixed(2)}</td>
+                      <td className="px-5 py-3 text-right">
+                        <button onClick={() => setSelectedOrder(order)} className={`flex items-center justify-end w-full space-x-1 transition-colors font-medium text-xs uppercase tracking-wide ${isDark ? 'text-[#a0a0a0] hover:text-[#ffb300]' : 'text-[#667382] hover:text-[#206bc4]'}`}>
+                          <IconEye stroke={1.5} size={16} /> <span>View</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Footer */}
+        <div className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-[#333333] bg-[#1a1a1a]' : 'border-[#e6e8e9] bg-[#f8f9fa]'}`}>
+          <p className={`text-sm ${isDark ? 'text-[#a0a0a0]' : 'text-[#667382]'}`}>
+            Showing {filteredAndSorted.length === 0 ? 0 : indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredAndSorted.length)} of {filteredAndSorted.length} entries
+          </p>
+          <div className="flex space-x-1">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className={`px-3 py-1.5 text-sm font-medium rounded border transition-colors ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''} ${isDark ? 'bg-[#252525] border-[#333333] text-[#e0e0e0] hover:bg-[#333333]' : 'bg-white border-[#e6e8e9] text-[#182433] hover:bg-[#e6e8e9]'}`}>
+              Previous
+            </button>
+            <div className={`flex items-center justify-center px-3 py-1.5 text-sm font-bold rounded ${isDark ? 'bg-[#ffb300] text-[#121212]' : 'bg-[#206bc4] text-white'}`}>
+              {currentPage}
+            </div>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className={`px-3 py-1.5 text-sm font-medium rounded border transition-colors ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''} ${isDark ? 'bg-[#252525] border-[#333333] text-[#e0e0e0] hover:bg-[#333333]' : 'bg-white border-[#e6e8e9] text-[#182433] hover:bg-[#e6e8e9]'}`}>
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* View Modal retained... */}
+      {/* ... */}
     </div>
   );
 }

@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateStock: (data) => ipcRenderer.invoke('update-stock', data),
   processOrder: (data) => ipcRenderer.invoke('process-order', data),
   selectImage: () => ipcRenderer.invoke('select-image'),
+  processDroppedImage: (filePath) => ipcRenderer.invoke('process-dropped-image', filePath),
   
   getDashboardStats: (range) => ipcRenderer.invoke('get-dashboard-stats', range),
   getTransactions: () => ipcRenderer.invoke('get-transactions'),
@@ -30,7 +31,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteCustomer: (id) => ipcRenderer.invoke('delete-customer', id),
   manualBackup: () => ipcRenderer.invoke('manual-backup'),
 
-  // --- THESE ARE THE NEW LINES IT NEEDS ---
   getActiveShift: () => ipcRenderer.invoke('get-active-shift'),
   openShift: (data) => ipcRenderer.invoke('open-shift', data),
   closeShift: (data) => ipcRenderer.invoke('close-shift', data),

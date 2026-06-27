@@ -1,39 +1,36 @@
 import { useState, useEffect } from 'react';
-import { IconSettings, IconTags, IconPlus, IconTrash, IconDeviceFloppy } from '@tabler/icons-react';
-import { useToast } from '../contexts/ToastContext'; // <-- ADD THIS
+import { IconSettings, IconTags, IconPlus, IconTrash, IconDeviceFloppy, IconMoon, IconSun } from '@tabler/icons-react';
+import { useToast } from '../contexts/ToastContext';
 
-export default function Settings() {
+export default function Settings({ theme, setTheme }) {
   const [activeSegment, setActiveSegment] = useState('general');
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState('');
-  const [settings, setSettings] = useState({ storeName: '', currency: 'USD', taxRate: '0' });
-  const [saveStatus, setSaveStatus] = useState('');
-  const showToast = useToast(); // <-- ADD THIS
+  const [settings, setSettingsState] = useState({ 
+    storeName: '', storeAddress: '', storePhone: '', receiptFooter: '', currency: 'USD', taxRate: '0' 
+  });
+  
+  const showToast = useToast();
+  const isDark = theme === 'dark';
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleManualBackup = async () => {
-    if (window.electronAPI) {
-      try {
-        const location = await window.electronAPI.manualBackup();
-        showToast(`Database backed up securely!`, 'success');
-      } catch (error) { showToast('Backup failed.', 'error'); }
-    }
-  };
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     if (window.electronAPI) {
       try {
-        const catData = await window.electronAPI.getCategories();
-        setCategories(catData);
-        
-        const setData = await window.electronAPI.getSettings();
-        const settingsObj = {};
-        setData.forEach(item => settingsObj[item.key] = item.value);
-        setSettings(settingsObj);
-      } catch (error) { console.error(error); }
+        setCategories(await window.electronAPI.getCategories());
+        const sData = await window.electronAPI.getSettings();
+        const sObj = { storeName: '', storeAddress: '', storePhone: '', receiptFooter: '', currency: 'USD', taxRate: '0' };
+        sData.forEach(item => { if (item.key !== 'theme') sObj[item.key] = item.value });
+        setSettingsState(sObj);
+      } catch (error) {}
+    }
+  };
+
+  const handleThemeToggle = async (mode) => {
+    setTheme(mode);
+    if (window.electronAPI) {
+      await window.electronAPI.updateSetting({ key: 'theme', value: mode });
     }
   };
 
@@ -45,7 +42,8 @@ export default function Settings() {
         await window.electronAPI.addCategory(newCategory.trim());
         setNewCategory('');
         loadData();
-      } catch (error) { alert("Category already exists or failed to add."); }
+        showToast("Category added successfully.", "success");
+      } catch (error) { showToast("Failed to add category.", "error"); }
     }
   };
 
@@ -54,7 +52,8 @@ export default function Settings() {
       try {
         await window.electronAPI.deleteCategory(id);
         loadData();
-      } catch (error) { console.error(error); }
+        showToast("Category removed.", "success");
+      } catch (error) { showToast("Failed to remove category.", "error"); }
     }
   };
 
@@ -63,130 +62,145 @@ export default function Settings() {
     if (window.electronAPI) {
       try {
         await window.electronAPI.updateSetting({ key: 'storeName', value: settings.storeName });
+        await window.electronAPI.updateSetting({ key: 'storeAddress', value: settings.storeAddress });
+        await window.electronAPI.updateSetting({ key: 'storePhone', value: settings.storePhone });
+        await window.electronAPI.updateSetting({ key: 'receiptFooter', value: settings.receiptFooter });
         await window.electronAPI.updateSetting({ key: 'currency', value: settings.currency });
         await window.electronAPI.updateSetting({ key: 'taxRate', value: settings.taxRate });
-        
-        showToast('Store settings updated securely!', 'success'); // <-- USE TOAST
-      } catch (error) { 
-        showToast('Failed to save settings.', 'error'); // <-- USE TOAST
-      }
+        showToast('Store settings updated securely!', 'success');
+      } catch (error) { showToast('Failed to save settings.', 'error'); }
     }
   };
 
-  const inputClass = "w-full bg-white border border-[#e6e8e9] rounded-md px-3 py-2 text-[#182433] text-sm focus:outline-none focus:border-[#206bc4] transition-colors";
-  const labelClass = "block text-xs font-semibold text-[#182433] mb-1.5";
+  const handleManualBackup = async () => {
+    if (window.electronAPI) {
+      try {
+        const location = await window.electronAPI.manualBackup();
+        showToast(`Backed up to: ${location}`, 'success');
+      } catch (error) { showToast('Backup failed.', 'error'); }
+    }
+  };
+
+  const inputClass = isDark 
+    ? "bg-[#121212] border border-[#333333] rounded-md px-3 py-2 text-[#e0e0e0] text-sm focus:outline-none focus:border-[#ffb300] transition-colors w-full"
+    : "bg-[#f4f6fa] border border-[#e6e8e9] rounded-md px-3 py-2 text-[#182433] text-sm focus:outline-none focus:border-[#206bc4] transition-colors w-full";
+  
+  const labelClass = `block text-xs font-semibold mb-1.5 uppercase tracking-wide ${isDark ? 'text-[#a0a0a0]' : 'text-[#667382]'}`;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#182433]">Store Settings</h2>
-      </div>
-
-      {/* Tabler Segmented Control */}
-      <div className="inline-flex bg-[#e6e8e9] rounded-md p-1">
-        <button 
-          onClick={() => setActiveSegment('general')}
-          className={`flex items-center px-4 py-1.5 rounded text-sm font-medium transition-colors ${activeSegment === 'general' ? 'bg-white text-[#182433] shadow-sm' : 'text-[#667382] hover:text-[#182433]'}`}
-        >
-          <IconSettings size={16} stroke={1.5} className="mr-2" /> General
-        </button>
-        <button 
-          onClick={() => setActiveSegment('categories')}
-          className={`flex items-center px-4 py-1.5 rounded text-sm font-medium transition-colors ${activeSegment === 'categories' ? 'bg-white text-[#182433] shadow-sm' : 'text-[#667382] hover:text-[#182433]'}`}
-        >
-          <IconTags size={16} stroke={1.5} className="mr-2" /> Categories
-        </button>
-      </div>
-
-      <div className="bg-white border border-[#e6e8e9] rounded-md shadow-sm overflow-hidden">
+        <h2 className={`text-2xl font-bold ${isDark ? 'text-[#ffffff]' : 'text-[#182433]'}`}>Store Settings</h2>
         
-        {/* General Settings Form Layout */}
-        {activeSegment === 'general' && (
-          <form onSubmit={handleSaveSettings} className="p-6">
-            <div className="mb-6 pb-6 border-b border-[#e6e8e9]">
-              <h3 className="text-lg font-bold text-[#182433] mb-1">General Details</h3>
-              <p className="text-sm text-[#667382]">Update your store's basic profile information.</p>
-            </div>
+        <div className={`flex items-center space-x-1 p-1 rounded-md border ${isDark ? 'bg-[#1a1a1a] border-[#333333]' : 'bg-[#f4f6fa] border-[#e6e8e9]'}`}>
+          <button onClick={() => handleThemeToggle('light')} className={`flex items-center px-3 py-1.5 text-sm font-medium rounded transition-colors ${!isDark ? 'bg-white text-[#206bc4] shadow-sm' : 'text-[#a0a0a0] hover:text-[#ffffff]'}`}>
+            <IconSun size={16} stroke={2} className="mr-1.5" /> Light
+          </button>
+          <button onClick={() => handleThemeToggle('dark')} className={`flex items-center px-3 py-1.5 text-sm font-medium rounded transition-colors ${isDark ? 'bg-[#252525] text-[#ffb300] shadow-sm' : 'text-[#667382] hover:text-[#182433]'}`}>
+            <IconMoon size={16} stroke={2} className="mr-1.5" /> Dark
+          </button>
+        </div>
+      </div>
 
-            <div className="space-y-5">
+      <div className={`flex space-x-2 border-b mb-6 ${isDark ? 'border-[#333333]' : 'border-[#e6e8e9]'}`}>
+        <button onClick={() => setActiveSegment('general')} className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeSegment === 'general' ? (isDark ? 'border-[#ffb300] text-[#ffb300]' : 'border-[#206bc4] text-[#206bc4]') : `border-transparent ${isDark ? 'text-[#a0a0a0] hover:text-[#ffffff]' : 'text-[#667382] hover:text-[#182433]'}`}`}>
+          <div className="flex items-center"><IconSettings size={18} className="mr-2" /> General & Receipts</div>
+        </button>
+        <button onClick={() => setActiveSegment('categories')} className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeSegment === 'categories' ? (isDark ? 'border-[#ffb300] text-[#ffb300]' : 'border-[#206bc4] text-[#206bc4]') : `border-transparent ${isDark ? 'text-[#a0a0a0] hover:text-[#ffffff]' : 'text-[#667382] hover:text-[#182433]'}`}`}>
+          <div className="flex items-center"><IconTags size={18} className="mr-2" /> Categories</div>
+        </button>
+      </div>
+
+      {activeSegment === 'general' && (
+        <div className={`border rounded-md shadow-sm ${isDark ? 'bg-[#1e1e1e] border-[#333333]' : 'bg-white border-[#e6e8e9]'}`}>
+          <form onSubmit={handleSaveSettings}>
+            <div className="p-6 space-y-6">
               <div>
-                <label className={labelClass}>Store Name</label>
-                <input type="text" value={settings.storeName} onChange={(e) => setSettings({...settings, storeName: e.target.value})} className={inputClass} placeholder="e.g. My Tabler Store" />
+                <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${isDark ? 'text-[#ffffff] border-[#333333]' : 'text-[#182433] border-[#e6e8e9]'}`}>Business Details</h3>
+                <div className="grid grid-cols-1 gap-5">
+                  <div>
+                    <label className={labelClass}>Store Name</label>
+                    <input type="text" required value={settings.storeName} onChange={(e) => setSettingsState({...settings, storeName: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Physical Address (Prints on Receipt)</label>
+                    <input type="text" value={settings.storeAddress} onChange={(e) => setSettingsState({...settings, storeAddress: e.target.value})} className={inputClass} placeholder="123 Commerce St, City, ST 12345" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Contact Phone</label>
+                    <input type="text" value={settings.storePhone} onChange={(e) => setSettingsState({...settings, storePhone: e.target.value})} className={inputClass} placeholder="(555) 123-4567" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Receipt Footer Message</label>
+                    <input type="text" value={settings.receiptFooter} onChange={(e) => setSettingsState({...settings, receiptFooter: e.target.value})} className={inputClass} placeholder="Thank you for shopping with us!" />
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className={labelClass}>Currency Code</label>
-                  <select value={settings.currency} onChange={(e) => setSettings({...settings, currency: e.target.value})} className={inputClass}>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="PHP">PHP (₱)</option>
-                  </select>
+
+              <div>
+                <h3 className={`text-lg font-bold mb-4 border-b pb-2 pt-4 ${isDark ? 'text-[#ffffff] border-[#333333]' : 'text-[#182433] border-[#e6e8e9]'}`}>Financial Settings</h3>
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className={labelClass}>Currency Display</label>
+                    <select value={settings.currency} onChange={(e) => setSettingsState({...settings, currency: e.target.value})} className={inputClass}>
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="PHP">PHP (₱)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Default Tax Rate (%)</label>
+                    <input type="number" step="0.01" required value={settings.taxRate} onChange={(e) => setSettingsState({...settings, taxRate: e.target.value})} className={inputClass} />
+                  </div>
                 </div>
+              </div>
+
+              <div className={`mt-8 p-4 border rounded-md flex items-center justify-between ${isDark ? 'bg-[#252525] border-[#333333]' : 'bg-[#f4f6fa] border-[#e6e8e9]'}`}>
                 <div>
-                  <label className={labelClass}>Default Tax Rate (%)</label>
-                  <input type="number" step="0.01" value={settings.taxRate} onChange={(e) => setSettings({...settings, taxRate: e.target.value})} className={inputClass} />
+                  <h4 className={`text-sm font-bold ${isDark ? 'text-[#ffffff]' : 'text-[#182433]'}`}>Manual Database Backup</h4>
+                  <p className={`text-xs mt-0.5 ${isDark ? 'text-[#a0a0a0]' : 'text-[#667382]'}`}>Create an instant offline copy of your store's data.</p>
                 </div>
-                <div className="mt-8 p-4 bg-[#f4f6fa] border border-[#e6e8e9] rounded-md flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-bold text-[#182433]">Manual Database Backup</h4>
-                  <p className="text-xs text-[#667382] mt-0.5">Create an instant offline copy of your store's data.</p>
-                </div>
-                <button type="button" onClick={handleManualBackup} className="bg-white border border-[#e6e8e9] text-[#182433] px-4 py-2 rounded-md text-sm font-medium hover:bg-[#e6e8e9] transition-colors shadow-sm">
+                <button type="button" onClick={handleManualBackup} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm border ${isDark ? 'bg-[#1a1a1a] border-[#333333] text-[#e0e0e0] hover:text-[#ffb300] hover:border-[#ffb300]' : 'bg-white border-[#e6e8e9] text-[#182433] hover:bg-[#e6e8e9]'}`}>
                   Backup Now
                 </button>
               </div>
-              </div>
             </div>
-
-            <div className="mt-8 pt-5 border-t border-[#e6e8e9] flex items-center justify-between">
-              <span className="text-sm text-[#2ba02b] font-medium">{saveStatus}</span>
-              <button type="submit" className="flex items-center bg-[#206bc4] text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-[#1d5fb0] transition-colors">
-                <IconDeviceFloppy size={18} stroke={1.5} className="mr-2" /> Save Changes
+            
+            <div className={`px-6 py-4 border-t flex justify-end ${isDark ? 'bg-[#1a1a1a] border-[#333333]' : 'bg-[#f8f9fa] border-[#e6e8e9]'}`}>
+              <button type="submit" className={`flex items-center px-6 py-2 rounded-md text-sm font-bold transition-colors shadow-sm ${isDark ? 'bg-[#ffb300] text-[#121212] hover:bg-[#d97706]' : 'bg-[#206bc4] text-white hover:bg-[#1d5fb0]'}`}>
+                <IconDeviceFloppy size={18} className="mr-2" /> Save Configuration
               </button>
             </div>
           </form>
-        )}
+        </div>
+      )}
 
-        {/* Dynamic Categories Manager Layout */}
-        {activeSegment === 'categories' && (
-          <div className="p-6 flex gap-8">
-            <div className="w-1/3 border-r border-[#e6e8e9] pr-8">
-              <h3 className="text-lg font-bold text-[#182433] mb-1">Add Category</h3>
-              <p className="text-sm text-[#667382] mb-5">Create a new label for organizing your inventory.</p>
-              
-              <form onSubmit={handleAddCategory} className="space-y-4">
-                <div>
-                  <label className={labelClass}>Category Name</label>
-                  <input type="text" required value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className={inputClass} placeholder="e.g. Electronics" />
+      {activeSegment === 'categories' && (
+        <div className={`border rounded-md shadow-sm p-6 ${isDark ? 'bg-[#1e1e1e] border-[#333333]' : 'bg-white border-[#e6e8e9]'}`}>
+          <form onSubmit={handleAddCategory} className="flex gap-3 mb-6">
+            <input type="text" required value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="New category name..." className={inputClass} />
+            <button type="submit" className={`px-4 py-2 rounded-md text-sm font-bold transition-colors flex items-center whitespace-nowrap ${isDark ? 'bg-[#ffb300] text-[#121212] hover:bg-[#d97706]' : 'bg-[#206bc4] text-white hover:bg-[#1d5fb0]'}`}>
+              <IconPlus size={16} className="mr-1" /> Add
+            </button>
+          </form>
+
+          <div className="space-y-2">
+            {categories.length === 0 ? (
+              <p className={`text-sm text-center py-4 ${isDark ? 'text-[#a0a0a0]' : 'text-[#667382]'}`}>No categories defined yet.</p>
+            ) : (
+              categories.map(cat => (
+                <div key={cat.id} className={`flex items-center justify-between p-3 border rounded-md ${isDark ? 'bg-[#252525] border-[#333333]' : 'bg-[#f8f9fa] border-[#e6e8e9]'}`}>
+                  <span className={`text-sm font-medium ${isDark ? 'text-[#e0e0e0]' : 'text-[#182433]'}`}>{cat.name}</span>
+                  <button onClick={() => handleDeleteCategory(cat.id)} className={`p-1 transition-colors ${isDark ? 'text-[#a0a0a0] hover:text-[#ffb300]' : 'text-[#667382] hover:text-[#d63939]'}`}>
+                    <IconTrash size={18} stroke={1.5} />
+                  </button>
                 </div>
-                <button type="submit" className="w-full flex justify-center items-center bg-[#206bc4] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#1d5fb0] transition-colors">
-                  <IconPlus size={18} stroke={2} className="mr-1" /> Add
-                </button>
-              </form>
-            </div>
-
-            <div className="flex-1">
-              <h3 className="text-sm font-bold text-[#667382] uppercase tracking-wider mb-4">Current Categories</h3>
-              <div className="border border-[#e6e8e9] rounded-md divide-y divide-[#e6e8e9]">
-                {categories.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-[#667382]">No categories found.</div>
-                ) : (
-                  categories.map(cat => (
-                    <div key={cat.id} className="flex items-center justify-between p-3 hover:bg-[#f8f9fa] transition-colors">
-                      <span className="text-sm font-semibold text-[#182433]">{cat.name}</span>
-                      <button onClick={() => handleDeleteCategory(cat.id)} className="text-[#667382] hover:text-[#d63939] p-1 transition-colors">
-                        <IconTrash size={16} stroke={1.5} />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+              ))
+            )}
           </div>
-        )}
-
-      </div>
+        </div>
+      )}
     </div>
   );
 }
