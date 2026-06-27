@@ -1,12 +1,12 @@
 export default function StatCard({ title, value, subtitle, icon: Icon }) {
   return (
-    <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 shadow-sm">
-      <div className="flex items-center justify-between space-y-0 pb-2">
-        <h3 className="tracking-tight text-sm font-medium text-zinc-100">{title}</h3>
-        {Icon && <Icon className="h-4 w-4 text-zinc-500" />}
+    <div className="bg-white border border-[#e6e8e9] rounded-md p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-[#667382] uppercase tracking-wider">{title}</h3>
+        {Icon && <Icon stroke={1.5} className="h-5 w-5 text-[#206bc4]" />}
       </div>
-      <div className="text-2xl font-bold text-white">{value}</div>
-      <p className="text-xs text-zinc-500 mt-1">{subtitle}</p>
+      <div className="text-3xl font-bold text-[#182433] mb-1">{value}</div>
+      <p className="text-sm text-[#20a790] font-medium">{subtitle}</p>
     </div>
   );
 }

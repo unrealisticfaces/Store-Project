@@ -1,30 +1,56 @@
-import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis } from 'recharts';
-
-const data = [
-  { name: 'Jan', total: 4200 },
-  { name: 'Feb', total: 3400 },
-  { name: 'Mar', total: 4600 },
-  { name: 'Apr', total: 3100 },
-  { name: 'May', total: 1600 },
-  { name: 'Jun', total: 3800 },
-  { name: 'Jul', total: 4100 },
-  { name: 'Aug', total: 4400 },
-  { name: 'Sep', total: 2000 },
-  { name: 'Oct', total: 3400 },
-  { name: 'Nov', total: 5000 },
-  { name: 'Dec', total: 4800 },
-];
+import Chart from 'react-apexcharts';
 
 export default function OverviewChart({ data }) {
+  // Format data for ApexCharts
+  const series = [{
+    name: 'Revenue',
+    data: data.map(item => item.total)
+  }];
+
+  const options = {
+    chart: {
+      type: 'area',
+      fontFamily: 'inherit',
+      toolbar: { show: false },
+      zoom: { enabled: false },
+      sparkline: { enabled: false },
+    },
+    colors: ['#206bc4'],
+    dataLabels: { enabled: false },
+    fill: {
+      type: 'solid',
+      opacity: 0.16,
+    },
+    stroke: {
+      curve: 'smooth',
+      width: 2,
+    },
+    xaxis: {
+      categories: data.map(item => item.name),
+      tooltip: { enabled: false },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: {
+        style: { colors: '#667382', fontSize: '12px' }
+      }
+    },
+    yaxis: {
+      labels: {
+        style: { colors: '#667382', fontSize: '12px' },
+        formatter: (value) => `$${value}`
+      }
+    },
+    grid: {
+      borderColor: '#e6e8e9',
+      strokeDashArray: 4,
+      padding: { top: 0, right: 0, bottom: 0, left: 10 }
+    },
+    tooltip: { theme: 'light' }
+  };
+
   return (
-    <div className="h-[350px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data}>
-          <XAxis dataKey="name" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
-          <YAxis stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-          <Bar dataKey="total" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="h-[300px] w-full">
+      <Chart options={options} series={series} type="area" height="100%" />
     </div>
   );
 }
