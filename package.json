@@ -1,40 +1,53 @@
 {
-  "name": "store-manager",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "name": "store-manager-pos",
+  "version": "1.0.0",
+  "description": "Enterprise POS and Inventory System",
   "main": "electron/main.cjs",
+  "author": "Store Admin",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview",
-    "electron:start": "cross-env NODE_ENV=development electron .",
-    "start": "concurrently \"npm run dev\" \"npm run electron:start\""
+    "serve": "vite preview",
+    "electron:start": "electron .",
+    "package": "npm run build && electron-builder --win"
   },
   "dependencies": {
-    "@fontsource/inter": "^5.2.8",
-    "@tabler/icons-react": "^3.44.0",
-    "@tailwindcss/vite": "^4.3.1",
-    "apexcharts": "^5.15.2",
-    "react": "^19.2.7",
-    "react-apexcharts": "^2.1.1",
-    "react-dom": "^19.2.7",
-    "recharts": "^3.9.0",
-    "sqlite3": "^6.0.1"
+    "@tabler/icons-react": "^3.0.0",
+    "apexcharts": "^3.49.0",
+    "react": "^18.2.0",
+    "react-apexcharts": "^1.4.1",
+    "react-dom": "^18.2.0",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.2",
-    "autoprefixer": "^10.5.2",
-    "concurrently": "^10.0.3",
-    "cross-env": "^10.1.0",
-    "electron": "^42.5.0",
-    "electron-builder": "^26.15.3",
-    "oxlint": "^1.69.0",
-    "postcss": "^8.5.15",
-    "tailwindcss": "^4.3.1",
-    "vite": "^8.1.0"
+    "@vitejs/plugin-react": "^4.2.1",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3",
+    "vite": "^5.2.0"
+  },
+  "build": {
+    "appId": "com.storemanager.pos",
+    "productName": "Store Manager POS",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Store Manager POS",
+      "installerIcon": "public/favicon.svg",
+      "uninstallerIcon": "public/favicon.svg",
+      "uninstallDisplayName": "Uninstall Store Manager POS"
+    }
   }
 }

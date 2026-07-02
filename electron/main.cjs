@@ -8,7 +8,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 const userDataPath = app.getPath('userData');
-const dbPath = path.join(__dirname, 'store.db');
+const dbPath = path.join(userDataPath, 'store.db');
 const uploadsDir = path.join(userDataPath, 'StoreManagerUploads');
 const backupDir = path.join(userDataPath, 'StoreManagerBackups');
 
