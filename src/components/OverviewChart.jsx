@@ -1,35 +1,45 @@
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import Chart from 'react-apexcharts';
 
-export default function OverviewChart({ data, theme }) {
+export default function OverviewChart({ data, theme, dateRange }) {
   const isDark = theme === 'dark';
-  const textColor = isDark ? '#a0a0a0' : '#667382';
-  const gridColor = isDark ? '#333333' : '#e6e8e9';
-  const chartColor = isDark ? '#ffb300' : '#206bc4';
-  
+
+  const seriesData = data.map(d => {
+    let xVal = d.date;
+    if (dateRange !== 'today') xVal = new Date(d.date).getTime();
+    return { x: xVal, y: d.total };
+  });
+
+  const series = [{ name: 'Revenue', data: seriesData }];
+
+  const options = {
+    chart: { type: 'area', fontFamily: 'inherit', toolbar: { show: false }, background: 'transparent' },
+    colors: [isDark ? '#ffb300' : '#206bc4'],
+    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: isDark ? 0.4 : 0.2, opacityTo: 0, stops: [0, 90, 100] } },
+    dataLabels: { enabled: false },
+    stroke: { curve: 'smooth', width: 2 },
+    xaxis: {
+      type: dateRange === 'today' ? 'category' : 'datetime',
+      labels: {
+         format: dateRange === '7days' ? 'ddd' : 'dd MMM',
+         style: { colors: isDark ? '#a0a0a0' : '#667382' }
+      },
+      axisBorder: { show: false }, 
+      axisTicks: { show: false },
+      tooltip: { enabled: false }
+    },
+    yaxis: { labels: { style: { colors: isDark ? '#a0a0a0' : '#667382' }, formatter: (val) => `$${val}` } },
+    grid: { borderColor: isDark ? '#333333' : '#e6e8e9', strokeDashArray: 3, xaxis: { lines: { show: false } } },
+    theme: { mode: isDark ? 'dark' : 'light' },
+    tooltip: {
+      theme: isDark ? 'dark' : 'light',
+      x: { format: 'dd MMM yyyy (dddd)' },
+      y: { formatter: (val) => `$${val.toFixed(2)}` }
+    }
+  };
+
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-        <defs>
-          <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={chartColor} stopOpacity={isDark ? 0.4 : 0.2}/>
-            <stop offset="95%" stopColor={chartColor} stopOpacity={0}/>
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
-        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: textColor, fontSize: 12, fontWeight: 500 }} dy={10} />
-        <YAxis axisLine={false} tickLine={false} tick={{ fill: textColor, fontSize: 12, fontWeight: 500 }} />
-        <Tooltip
-          contentStyle={{ 
-            backgroundColor: isDark ? '#1e1e1e' : '#ffffff', 
-            borderColor: isDark ? '#333333' : '#e6e8e9', 
-            color: isDark ? '#ffffff' : '#182433', 
-            borderRadius: '6px', 
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-          }}
-          itemStyle={{ color: chartColor, fontWeight: 'bold' }}
-        />
-        <Area type="monotone" dataKey="total" stroke={chartColor} strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" activeDot={{ r: 6, strokeWidth: 0, fill: chartColor }} />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div className="w-full h-full min-h-[300px]">
+      <Chart options={options} series={series} type="area" height="100%" />
+    </div>
   );
 }

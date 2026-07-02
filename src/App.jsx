@@ -31,9 +31,7 @@ export default function App() {
     }} />;
   }
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-  };
+  const handleLogout = () => setCurrentUser(null);
 
   return (
     <div className={`flex h-screen overflow-hidden font-sans ${theme === 'dark' ? 'bg-[#121212] text-[#e0e0e0]' : 'bg-[#f4f6fa] text-[#182433]'}`}>

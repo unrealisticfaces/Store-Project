@@ -19,9 +19,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         <div className={`p-1.5 rounded shadow-sm ${isDark ? 'bg-[#ffb300] text-[#121212]' : 'bg-[#206bc4] text-white'}`}>
           <IconPackage stroke={isDark ? 2 : 1.5} size={24} />
         </div>
-        <div>
-          <h1 className={`font-bold text-base tracking-tight ${isDark ? 'text-[#ffffff]' : 'text-[#182433]'}`}>Store Admin</h1>
-        </div>
+        <div><h1 className={`font-bold text-base tracking-tight ${isDark ? 'text-[#ffffff]' : 'text-[#182433]'}`}>Store Admin</h1></div>
       </div>
       
       <div className="flex-1 py-4 px-3 flex flex-col">
@@ -30,8 +28,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
             <div className={`px-3 mb-2 text-[11px] font-bold uppercase tracking-widest ${isDark ? 'text-[#7a7a7a]' : 'text-[#667382]'}`}>Analytics</div>
             <nav className="space-y-1 mb-6">
               <button onClick={() => setActiveTab('dashboard')} className={activeTab === 'dashboard' ? activeClass : inactiveClass}>
-                <IconDashboard stroke={1.5} size={20} className="mr-3" />
-                <span className="text-sm">Dashboard</span>
+                <IconDashboard stroke={1.5} size={20} className="mr-3" /> <span className="text-sm">Dashboard</span>
               </button>
             </nav>
           </>
@@ -40,21 +37,17 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         <div className={`px-3 mb-2 text-[11px] font-bold uppercase tracking-widest ${isDark ? 'text-[#7a7a7a]' : 'text-[#667382]'}`}>Store Operations</div>
         <nav className="space-y-1 mb-6">
           <button onClick={() => setActiveTab('shifts')} className={activeTab === 'shifts' ? activeClass : inactiveClass}>
-            <IconCash stroke={1.5} size={20} className="mr-3" />
-            <span className="text-sm flex-1 text-left">Cash Register</span>
+            <IconCash stroke={1.5} size={20} className="mr-3" /> <span className="text-sm flex-1 text-left">Cash Register</span>
           </button>
           <button onClick={() => setActiveTab('orders')} className={activeTab === 'orders' ? activeClass : inactiveClass}>
-            <IconShoppingCart stroke={1.5} size={20} className="mr-3" />
-            <span className="text-sm flex-1 text-left">Point of Sale</span>
+            <IconShoppingCart stroke={1.5} size={20} className="mr-3" /> <span className="text-sm flex-1 text-left">Point of Sale</span>
           </button>
           <button onClick={() => setActiveTab('transactions')} className={activeTab === 'transactions' ? activeClass : inactiveClass}>
-            <IconReceipt2 stroke={1.5} size={20} className="mr-3" />
-            <span className="text-sm text-left">Sales History</span>
+            <IconReceipt2 stroke={1.5} size={20} className="mr-3" /> <span className="text-sm text-left">Transactions</span>
           </button>
           {isAdmin && (
             <button onClick={() => setActiveTab('inventory')} className={activeTab === 'inventory' ? activeClass : inactiveClass}>
-              <IconPackage stroke={1.5} size={20} className="mr-3" />
-              <span className="text-sm">Inventory Management</span>
+              <IconPackage stroke={1.5} size={20} className="mr-3" /> <span className="text-sm">Inventory Directory</span>
             </button>
           )}
         </nav>
@@ -64,16 +57,13 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
             <div className={`px-3 mb-2 text-[11px] font-bold uppercase tracking-widest ${isDark ? 'text-[#7a7a7a]' : 'text-[#667382]'}`}>Administration</div>
             <nav className="space-y-1">
               <button onClick={() => setActiveTab('customers')} className={activeTab === 'customers' ? activeClass : inactiveClass}>
-                <IconUsers stroke={1.5} size={20} className="mr-3" />
-                <span className="text-sm text-left">Customers</span>
+                <IconUsers stroke={1.5} size={20} className="mr-3" /> <span className="text-sm text-left">Customers</span>
               </button>
               <button onClick={() => setActiveTab('staff')} className={activeTab === 'staff' ? activeClass : inactiveClass}>
-                <IconUsers stroke={1.5} size={20} className="mr-3" />
-                <span className="text-sm text-left">Staff Accounts</span>
+                <IconUsers stroke={1.5} size={20} className="mr-3" /> <span className="text-sm text-left">Staff Accounts</span>
               </button>
               <button onClick={() => setActiveTab('settings')} className={activeTab === 'settings' ? activeClass : inactiveClass}>
-                <IconSettings stroke={1.5} size={20} className="mr-3" />
-                <span className="text-sm text-left">Store Settings</span>
+                <IconSettings stroke={1.5} size={20} className="mr-3" /> <span className="text-sm text-left">Store Settings</span>
               </button>
             </nav>
           </>
